@@ -1,4 +1,4 @@
-repositories {
+    repositories {
     mavenCentral()
     google() // Needed for androidx
     maven { url = "https://mymaven.bylazar.com/releases" }
