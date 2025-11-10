@@ -25,7 +25,7 @@ public class turret extends LinearOpMode {
     private static final double MAX_TARGET_AREA = 5.0;   // Largest expected target area (close)
 
     // Additional power when target is found and centered
-    private static final double TARGET_FOUND_BONUS = 0.40; // Extra power when target is centered
+    private static final double TARGET_FOUND_BONUS = 0.50; // Extra power when target is centered
     private static final double NO_TARGET_POWER = 0.1; // Very low power when no target
 
     double frontLeftPower = (0.15);
@@ -36,8 +36,7 @@ public class turret extends LinearOpMode {
     private DcMotor rotationMotor;
     private Limelight3A limelight;
     private DcMotor Shooter, Shooter2;
-    private DcMotor motor_rf, motor_lf, motor_rb, motor_lb, IntakeMotor;
-    private Servo Pusher;
+    private DcMotor motor_rf, motor_lf, motor_rb, motor_lb, IntakeMotor,Pusher;
     private double lastMotorPower = 0.0;
 
     @Override
@@ -56,10 +55,10 @@ public class turret extends LinearOpMode {
         motor_rb = hardwareMap.get(DcMotor.class, "motor_rb");
 
         IntakeMotor = hardwareMap.get(DcMotor.class, "IntakeMotor");
-        Pusher = hardwareMap.get(Servo.class, "Pusher");
-        Pusher.setDirection(Servo.Direction.REVERSE);
+        Pusher = hardwareMap.get(DcMotor.class, "Pusher");
+        Pusher.setDirection(DcMotorSimple.Direction.FORWARD);
         IntakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        motor_lf.setDirection(DcMotor.Direction.FORWARD);
+        motor_lf.setDirection(DcMotor.Direction.REVERSE);
         motor_lb.setDirection(DcMotor.Direction.REVERSE);
         motor_rf.setDirection(DcMotor.Direction.FORWARD);
         motor_rb.setDirection(DcMotor.Direction.FORWARD);
@@ -68,16 +67,13 @@ public class turret extends LinearOpMode {
         motor_rf.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         motor_rb.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         IntakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        Pusher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         Shooter = hardwareMap.get(DcMotor.class, "Shooter");
         Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         Shooter.setDirection(DcMotorSimple.Direction.REVERSE);
         Shooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        Shooter2 = hardwareMap.get(DcMotor.class, "Shooter2");
-        Shooter2.setDirection(DcMotorSimple.Direction.REVERSE);
-        Shooter2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         limelight = hardwareMap.get(Limelight3A.class, "Limelight");
         limelight.pipelineSwitch(0);
@@ -90,7 +86,7 @@ public class turret extends LinearOpMode {
         while (opModeIsActive()) {
             LLResult llResult = limelight.getLatestResult();
             double shooterPower = NO_TARGET_POWER; // Start with low power
-            double y = -gamepad1.left_stick_y;
+            double y = gamepad1.left_stick_y;
             double x = gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
 
@@ -112,11 +108,9 @@ public class turret extends LinearOpMode {
             }
 
             if (gamepad1.b) {
-                Pusher.setPosition(1);
-            } else if (gamepad1.x) {
-                Pusher.setPosition(0.0);
+                Pusher.setPower(0.9);
             } else {
-                Pusher.setPosition(0.5);
+                Pusher.setPower(0);
             }
 
             if (llResult != null && llResult.isValid()) {
@@ -179,7 +173,6 @@ public class turret extends LinearOpMode {
             }
 
             Shooter.setPower(shooterPower);
-            Shooter2.setPower(shooterPower);
 
             telemetry.addData("Final Shooter Power", shooterPower);
             telemetry.update();
