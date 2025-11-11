@@ -106,7 +106,7 @@ public class Pedrotest extends OpMode {
                 }
             case 3:
                 if(!follower.isBusy()) {
-                    follower.followPath(score2,true);
+                    follower.followPath(Score1,true);
                     setPathState(4);
                     break;
                 }
