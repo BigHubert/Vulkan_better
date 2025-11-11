@@ -96,31 +96,37 @@ public class Pedrotest extends OpMode {
                 if(!follower.isBusy()) {
                     follower.followPath(grabBalls1,true);
                     setPathState(2);
+                    break;
                 }
             case 2:
                 if(!follower.isBusy()) {
                     follower.followPath(pickballs1,true);
                     setPathState(3);
+                    break;
                 }
             case 3:
                 if(!follower.isBusy()) {
                     follower.followPath(score2,true);
                     setPathState(4);
+                    break;
                 }
             case 4:
                 if(!follower.isBusy()) {
                     follower.followPath(grabBall2,true);
                     setPathState(5);
+                    break;
                 }
             case 5:
                 if(!follower.isBusy()) {
                     follower.followPath(pickballs2,true);
                     setPathState(6);
+                    break;
                 }
             case 6:
                 if(!follower.isBusy()) {
                     follower.followPath(score2,true);
                     setPathState(7);
+                    break;
                 }
             case 7:
                 if(!follower.isBusy()) {
