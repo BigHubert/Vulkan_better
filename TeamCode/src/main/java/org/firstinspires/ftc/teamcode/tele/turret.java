@@ -10,25 +10,23 @@ import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name = "Turret", group = "TeleOp")
 public class turret extends LinearOpMode {
-    private static final double TARGETTX = 0.0;
+    private static final double targetTx = 0.0;
 
-    // Simple control parameters
-    private static final double LARGE_DEADZONE = 4.5; // Much larger deadzone - don't move for small errors
-    private static final double MAX_MOTOR_POWER = 0.25; // Reduced max power
-    private static final double ROTATION_SPEED = 0.15; // Base rotation speed
-    private static final double MIN_MOTOR_POWER = 0.08; // Minimum power to move motor
+    private static final double deadzone = 4.5;
+    private static final double maxMotorPower = 0.25;
+    private static final double rotationSpeed = 0.15;
+    private static final double minMotorPower = 0.08;
 
-    // Shooter power constants - INVERTED for distance-based power
-    private static final double MIN_SHOOTER_POWER = 0.4; // Higher minimum power for close targets
-    private static final double MAX_SHOOTER_POWER = 0.9; // Maximum power for far targets
-    private static final double MIN_TARGET_AREA = 0.1;   // Smallest expected target area (far)
-    private static final double MAX_TARGET_AREA = 5.0;   // Largest expected target area (close)
+    private static final double minShooterPower = 0.4;
+    private static final double maxShooterPower = 0.9;
+    private static final double minTa = 0.1;
+    private static final double maxTa = 5.0;
 
     // Additional power when target is found and centered
-    private static final double TARGET_FOUND_BONUS = 0.50; // Extra power when target is centered
-    private static final double NO_TARGET_POWER = 0.1; // Very low power when no target
+    private static final double foundBonus = 0.50;
+    private static final double noTargetPower = 0.0;
     private static final double llhieght = 0.25; // meters
-    private static final double Theight = 1.5;     // meters
+    private static final double Theight = 1.5;   // meters
     private static final double llangle = 20.0;
 
     double frontLeftPower = (0.15);
@@ -46,7 +44,6 @@ public class turret extends LinearOpMode {
         double pos = 0.25 + 0.15 * distance;
         return Range.clip(pos, 0.0, 1.0);
     }
-
     @Override
     public void runOpMode() {
 
@@ -95,7 +92,7 @@ public class turret extends LinearOpMode {
 
         while (opModeIsActive()) {
             LLResult llResult = limelight.getLatestResult();
-            double shooterPower = NO_TARGET_POWER; // Start with low power
+            double shooterPower = noTargetPower;
             double y = gamepad1.left_stick_y;
             double x = gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
@@ -126,18 +123,17 @@ public class turret extends LinearOpMode {
             if (llResult != null && llResult.isValid()) {
                 double tx = llResult.getTx();
                 double ta = llResult.getTa();
-                double error = TARGETTX - tx;
+                double error = targetTx - tx;
                 double absError = Math.abs(error);
                 double ty = llResult.getTy();
 
-                // INVERTED shooter power calculation: smaller ta (farther) = higher power
+
                 if (ta > 0) {
-                    // Inverted calculation: MAX_SHOOTER_POWER for small ta, MIN_SHOOTER_POWER for large ta
                     shooterPower = Range.clip(
-                            MAX_SHOOTER_POWER - (ta - MIN_TARGET_AREA) *
-                                    (MAX_SHOOTER_POWER - MIN_SHOOTER_POWER) / (MAX_TARGET_AREA - MIN_TARGET_AREA),
-                            MIN_SHOOTER_POWER,
-                            MAX_SHOOTER_POWER
+                            maxShooterPower - (ta - minTa) *
+                                    (maxShooterPower - minShooterPower) / (maxTa - minTa),
+                            minShooterPower,
+                            maxShooterPower
                     );
                 }
                 double totalAngle = Math.toRadians(llangle + ty);
@@ -152,17 +148,14 @@ public class turret extends LinearOpMode {
                 telemetry.addData("Error", error);
                 telemetry.addData("Base ShooterPower", shooterPower);
 
-                // Simple proportional control with large deadzone
-                if (absError > LARGE_DEADZONE) {
-                    // Calculate motor power directly from error (no PID)
-                    double motorPower = error * ROTATION_SPEED;
+                if (absError > deadzone) {
 
-                    // Apply power limits
-                    motorPower = Range.clip(motorPower, -MAX_MOTOR_POWER, MAX_MOTOR_POWER);
+                    double motorPower = error * rotationSpeed;
 
-                    // Apply minimum power threshold
-                    if (Math.abs(motorPower) > 0 && Math.abs(motorPower) < MIN_MOTOR_POWER) {
-                        motorPower = Math.signum(motorPower) * MIN_MOTOR_POWER;
+                    motorPower = Range.clip(motorPower, -maxMotorPower, maxMotorPower);
+
+                    if (Math.abs(motorPower) > 0 && Math.abs(motorPower) < minMotorPower) {
+                        motorPower = Math.signum(motorPower) * minMotorPower;
                     }
 
                     rotationMotor.setPower(motorPower);
@@ -171,18 +164,16 @@ public class turret extends LinearOpMode {
                     telemetry.addData("Status", "Tracking");
                     telemetry.addData("Motor Power", motorPower);
                 } else {
-                    // Target is centered - increase shooter power!
-                    shooterPower += TARGET_FOUND_BONUS;
+                    shooterPower += foundBonus;
                     shooterPower = Range.clip(shooterPower, 0, 1.0); // Cap at 100%
 
                     rotationMotor.setPower(0);
                     lastMotorPower = 0;
                     telemetry.addData("Status", "Centered - MAX POWER!");
-                    telemetry.addData("Target Found Bonus", TARGET_FOUND_BONUS);
+                    telemetry.addData("Target Found Bonus", foundBonus);
                 }
             } else {
-                // No target detected - use very low power
-                shooterPower = NO_TARGET_POWER;
+                shooterPower = noTargetPower;
                 rotationMotor.setPower(0);
                 lastMotorPower = 0;
                 telemetry.addData("Status", "No Data");
