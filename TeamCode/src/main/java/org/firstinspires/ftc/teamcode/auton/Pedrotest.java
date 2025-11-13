@@ -51,9 +51,11 @@ public class Pedrotest extends OpMode {
 
     }
     public void init_loop(){
+        if (follower != null && follower.getPose() != null) {
+            follower.update();
+            drawOnlyCurrent();
+        }
         telemetryM.update(telemetry);
-        follower.update();
-        drawOnlyCurrent();
     }
 
     private void buildPaths() {

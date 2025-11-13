@@ -27,6 +27,9 @@ public class turret extends LinearOpMode {
     // Additional power when target is found and centered
     private static final double TARGET_FOUND_BONUS = 0.50; // Extra power when target is centered
     private static final double NO_TARGET_POWER = 0.1; // Very low power when no target
+    private static final double llhieght = 0.25; // meters
+    private static final double Theight = 1.5;     // meters
+    private static final double llangle = 20.0;
 
     double frontLeftPower = (0.15);
     double frontRightPower = (0.15);
@@ -35,9 +38,14 @@ public class turret extends LinearOpMode {
 
     private DcMotor rotationMotor;
     private Limelight3A limelight;
-    private DcMotor Shooter, Shooter2;
+    private DcMotor Shooter;
     private DcMotor motor_rf, motor_lf, motor_rb, motor_lb, IntakeMotor,Pusher;
+    private Servo hood;
     private double lastMotorPower = 0.0;
+    private double getHoodPosition(double distance) {
+        double pos = 0.25 + 0.15 * distance;
+        return Range.clip(pos, 0.0, 1.0);
+    }
 
     @Override
     public void runOpMode() {
@@ -48,6 +56,8 @@ public class turret extends LinearOpMode {
         rotationMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rotationMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         rotationMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        hood = hardwareMap.get(Servo.class, "hood");
+        hood.setDirection(Servo.Direction.FORWARD);
 
         motor_lf = hardwareMap.get(DcMotor.class, "motor_lf");
         motor_rf = hardwareMap.get(DcMotor.class, "motor_rf");
@@ -118,6 +128,7 @@ public class turret extends LinearOpMode {
                 double ta = llResult.getTa();
                 double error = TARGETTX - tx;
                 double absError = Math.abs(error);
+                double ty = llResult.getTy();
 
                 // INVERTED shooter power calculation: smaller ta (farther) = higher power
                 if (ta > 0) {
@@ -129,6 +140,11 @@ public class turret extends LinearOpMode {
                             MAX_SHOOTER_POWER
                     );
                 }
+                double totalAngle = Math.toRadians(llangle + ty);
+                double distance = (Theight - llhieght) / Math.tan(totalAngle);
+                double hoodPos = getHoodPosition(distance);
+                hood.setPosition(hoodPos);
+
 
                 telemetry.addData("Tx", tx);
                 telemetry.addData("Ty", llResult.getTy());
