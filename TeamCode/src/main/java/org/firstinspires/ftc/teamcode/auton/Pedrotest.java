@@ -35,8 +35,10 @@ public class Pedrotest extends OpMode {
     private final Pose scorePose3 = new Pose(55, 95, Math.toRadians(130));
     private final Pose grabball1 = new Pose(37, 35, Math.toRadians(180));
     private final Pose grabball2 = new Pose(34, 60, Math.toRadians(180));
+    private final Pose endPose = new Pose(55,134, Math.toRadians(270));
+
     private Path scorePreload;
-    private PathChain grabBalls1, pickballs1,Score1, grabBall2,pickballs2, score2;
+    private PathChain grabBalls1, pickballs1, Score1, grabBall2, pickballs2, score2,finish;
 
     @Override
     public void init() {
@@ -44,17 +46,54 @@ public class Pedrotest extends OpMode {
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
         follower = Constants.createFollower(hardwareMap);
-        buildPaths();
         Drawing.init();
-        follower.setStartingPose(startPose);
-        telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
 
+        // CRITICAL: Set starting pose BEFORE building paths
+        // Make sure this matches your robot's ACTUAL starting position on the field
+        follower.setStartingPose(startPose);
+
+        buildPaths();
+        telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
     }
+
+    public static void drawOnlyCurrent() {
+        try {
+            org.firstinspires.ftc.teamcode.auton.Drawing.drawRobot(follower.getPose());
+            org.firstinspires.ftc.teamcode.auton.Drawing.sendPacket();
+        } catch (Exception e) {
+            throw new RuntimeException("Drawing failed " + e);
+        }
+    }
+
+    public static void draw() {
+        org.firstinspires.ftc.teamcode.auton.Drawing.drawDebug(follower);
+    }
+
+    private void drawAllPaths() {
+        Style pathStyle = new Style("", "#FF9800", 0.5);
+
+        // Draw all paths in sequence
+        Drawing.drawPath(scorePreload, pathStyle);
+        Drawing.drawPath(grabBalls1, pathStyle);
+        Drawing.drawPath(pickballs1, pathStyle);
+        Drawing.drawPath(Score1, pathStyle);
+        Drawing.drawPath(grabBall2, pathStyle);
+        Drawing.drawPath(pickballs2, pathStyle);
+        Drawing.drawPath(score2, pathStyle);
+        Drawing.drawPath(finish, pathStyle);
+    }
+
     public void init_loop(){
-        if (follower != null && follower.getPose() != null) {
+        if (follower != null) {
             follower.update();
+
+            // Draw all paths that will be followed during autonomous
+            drawAllPaths();
+
+            // Draw the current robot pose
             drawOnlyCurrent();
         }
+
         telemetryM.update(telemetry);
     }
 
@@ -66,25 +105,34 @@ public class Pedrotest extends OpMode {
                 .addPath(new BezierCurve(scorePose, new Pose(64, 31, Math.toRadians(180)), pickBall))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), pickBall.getHeading())
                 .build();
+
         pickballs1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickBall,grabball1))
+                .addPath(new BezierLine(pickBall, grabball1))
                 .setLinearHeadingInterpolation(pickBall.getHeading(), grabball1.getHeading())
                 .build();
+
         Score1 = follower.pathBuilder()
-                .addPath(new BezierCurve(pickBall, new Pose(75,40, Math.toRadians(130)), scorePose2))
-                .setLinearHeadingInterpolation(pickBall.getHeading(), scorePose2.getHeading())
+                .addPath(new BezierCurve(grabball1, new Pose(75, 40, Math.toRadians(130)), scorePose2))
+                .setLinearHeadingInterpolation(grabball1.getHeading(), scorePose2.getHeading())
                 .build();
+
         grabBall2 = follower.pathBuilder()
-                .addPath(new BezierCurve(scorePose2,new Pose(65,56, Math.toRadians(180)), pickBall2))
+                .addPath(new BezierCurve(scorePose2, new Pose(65, 56, Math.toRadians(180)), pickBall2))
                 .setLinearHeadingInterpolation(scorePose2.getHeading(), pickBall2.getHeading())
                 .build();
+
         pickballs2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickBall2,grabball2))
+                .addPath(new BezierLine(pickBall2, grabball2))
                 .setLinearHeadingInterpolation(pickBall2.getHeading(), grabball2.getHeading())
                 .build();
+
         score2 = follower.pathBuilder()
-                .addPath(new BezierCurve(pickBall2,new Pose(66,53, Math.toRadians(130)), scorePose3))
-                .setLinearHeadingInterpolation(pickBall2.getHeading(), scorePose3.getHeading())
+                .addPath(new BezierCurve(grabball2, new Pose(66, 53, Math.toRadians(130)), scorePose3))
+                .setLinearHeadingInterpolation(grabball2.getHeading(), scorePose3.getHeading())
+                .build();
+        finish = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose3, endPose))
+                .setLinearHeadingInterpolation(scorePose3.getHeading(), endPose.getHeading())
                 .build();
     }
 
@@ -94,43 +142,56 @@ public class Pedrotest extends OpMode {
                 follower.followPath(scorePreload);
                 setPathState(1);
                 break;
+
             case 1:
                 if(!follower.isBusy()) {
-                    follower.followPath(grabBalls1,true);
+                    follower.followPath(grabBalls1, true);
                     setPathState(2);
-                    break;
                 }
+                break;
+
             case 2:
                 if(!follower.isBusy()) {
-                    follower.followPath(pickballs1,true);
+                    follower.followPath(pickballs1, true);
                     setPathState(3);
-                    break;
                 }
+                break;
+
             case 3:
                 if(!follower.isBusy()) {
-                    follower.followPath(Score1,true);
+                    follower.followPath(Score1, true);
                     setPathState(4);
-                    break;
                 }
+                break;
+
             case 4:
                 if(!follower.isBusy()) {
-                    follower.followPath(grabBall2,true);
+                    follower.followPath(grabBall2, true);
                     setPathState(5);
-                    break;
                 }
+                break;
+
             case 5:
                 if(!follower.isBusy()) {
-                    follower.followPath(pickballs2,true);
+                    follower.followPath(pickballs2, true);
                     setPathState(6);
-                    break;
                 }
+                break;
+
             case 6:
                 if(!follower.isBusy()) {
-                    follower.followPath(score2,true);
+                    follower.followPath(score2, true);
                     setPathState(7);
-                    break;
                 }
+                break;
             case 7:
+                if(!follower.isBusy()) {
+                    follower.followPath(finish, true);
+                    setPathState(8);
+                }
+                break;
+
+            case 8:
                 if(!follower.isBusy()) {
                     setPathState(-1);
                 }
@@ -146,6 +207,26 @@ public class Pedrotest extends OpMode {
     @Override
     public void start() {
         opmodeTimer.resetTimer();
+
+        // IMPORTANT: Reset the starting pose when autonomous actually starts
+        // This ensures the robot knows where it actually is
+        follower.setStartingPose(startPose);
+
+        // Update the follower a few times to let it settle and localize
+        for (int i = 0; i < 5; i++) {
+            follower.update();
+        }
+
+        // Debug: Check if starting pose matches actual pose
+        Pose actualPose = follower.getPose();
+        telemetryM.debug("Expected Start X: " + startPose.getX());
+        telemetryM.debug("Actual Start X: " + actualPose.getX());
+        telemetryM.debug("Expected Start Y: " + startPose.getY());
+        telemetryM.debug("Actual Start Y: " + actualPose.getY());
+        telemetryM.debug("Expected Start Heading: " + Math.toDegrees(startPose.getHeading()));
+        telemetryM.debug("Actual Start Heading: " + Math.toDegrees(actualPose.getHeading()));
+        telemetryM.update(telemetry);
+
         setPathState(0);
     }
 
@@ -156,22 +237,23 @@ public class Pedrotest extends OpMode {
 
         telemetryM.debug("x:" + follower.getPose().getX());
         telemetryM.debug("y:" + follower.getPose().getY());
-        telemetryM.debug("heading:" + follower.getPose().getHeading());
-        telemetryM.debug("total heading:" + follower.getTotalHeading());
+        telemetryM.debug("heading:" + Math.toDegrees(follower.getPose().getHeading()));
+        telemetryM.debug("total heading:" + Math.toDegrees(follower.getTotalHeading()));
+        telemetryM.debug("pathState:" + pathState);
+        telemetryM.debug("isBusy:" + follower.isBusy());
         telemetryM.update(telemetry);
+
         Drawing.drawDebug(follower);
+        draw();
     }
 }
+
 class Drawing {
     public static final double ROBOT_RADIUS = 9; // woah
     private static final FieldManager panelsField = PanelsField.INSTANCE.getField();
 
-    private static final Style robotLook = new Style(
-            "", "#3F51B5", 0.75
-    );
-    private static final Style historyLook = new Style(
-            "", "#4CAF50", 0.75
-    );
+    private static final Style robotLook = new Style("", "#3F51B5", 0.75);
+    private static final Style historyLook = new Style("", "#4CAF50", 0.75);
 
     /**
      * This prepares Panels Field for using Pedro Offsets
@@ -194,7 +276,6 @@ class Drawing {
         }
         drawPoseHistory(follower.getPoseHistory(), historyLook);
         drawRobot(follower.getPose(), historyLook);
-
         sendPacket();
     }
 
@@ -235,6 +316,7 @@ class Drawing {
 
     /**
      * This draws a Path with a specified look.
+     * FIXED: Draws a continuous curved line by explicitly connecting each point to the next
      *
      * @param path  the Path to draw
      * @param style the parameters used to draw the Path with
@@ -242,6 +324,7 @@ class Drawing {
     public static void drawPath(Path path, Style style) {
         double[][] points = path.getPanelsDrawingPoints();
 
+        // Validate and fix NaN values
         for (int i = 0; i < points[0].length; i++) {
             for (int j = 0; j < points.length; j++) {
                 if (Double.isNaN(points[j][i])) {
@@ -250,9 +333,43 @@ class Drawing {
             }
         }
 
+        if (points[0].length < 2) {
+            return; // Need at least 2 points to draw a line
+        }
+
         panelsField.setStyle(style);
-        panelsField.moveCursor(points[0][0], points[0][1]);
-        panelsField.line(points[1][0], points[1][1]);
+
+        // Determine step size for curves
+        int step = 1;
+        if (points[0].length > 100) {
+            step = Math.max(1, points[0].length / 150);
+        }
+
+        // Draw continuous path: connect point i to point i+1
+        // Start at first point
+        double prevX = points[0][0];
+        double prevY = points[1][0];
+
+        // Draw line segments connecting consecutive sampled points
+        for (int i = step; i < points[0].length; i += step) {
+            double currX = points[0][i];
+            double currY = points[1][i];
+
+            // Move to previous point, then draw line to current point
+            panelsField.moveCursor(prevX, prevY);
+            panelsField.line(currX, currY);
+
+            // Update previous point for next iteration
+            prevX = currX;
+            prevY = currY;
+        }
+
+        // Complete the path to the very last point if we didn't already
+        int lastIndex = points[0].length - 1;
+        if (lastIndex % step != 0) {
+            panelsField.moveCursor(prevX, prevY);
+            panelsField.line(points[0][lastIndex], points[1][lastIndex]);
+        }
     }
 
     /**
@@ -279,7 +396,6 @@ class Drawing {
 
         int size = poseTracker.getXPositionsArray().length;
         for (int i = 0; i < size - 1; i++) {
-
             panelsField.moveCursor(poseTracker.getXPositionsArray()[i], poseTracker.getYPositionsArray()[i]);
             panelsField.line(poseTracker.getXPositionsArray()[i + 1], poseTracker.getYPositionsArray()[i + 1]);
         }
@@ -289,14 +405,14 @@ class Drawing {
      * This draws the pose history of the robot.
      *
      * @param poseTracker the PoseHistory to get the pose history from
-     */
+     **/
     public static void drawPoseHistory(PoseHistory poseTracker) {
         drawPoseHistory(poseTracker, historyLook);
     }
 
     /**
      * This tries to send the current packet to FTControl Panels.
-     */
+     **/
     public static void sendPacket() {
         panelsField.update();
     }

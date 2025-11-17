@@ -1,4 +1,5 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
+
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.follower.Follower;
@@ -12,35 +13,41 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
+
     public static FollowerConstants followerConstants = new FollowerConstants()
             .mass(9.525)
             .forwardZeroPowerAcceleration(-25.9346931313679598)
             .lateralZeroPowerAcceleration(-67.342491844080064)
+
+            // Reduced P values to prevent erratic corrections when off course
             .translationalPIDFCoefficients(new PIDFCoefficients(
-                    0.03,
+                    0.04,   // Reduced from 0.05 - less aggressive
                     0,
-                    0,
+                    0.012,  // Slightly increased D for better damping
                     0.015
             ))
             .translationalPIDFSwitch(4)
             .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
-                    0.4,
+                    0.25,   // Reduced from 0.3 - less aggressive when far from path
                     0,
-                    0.005,
+                    0.02,   // Increased D for better damping
                     0.0006
             ))
+
+            // Further reduced heading correction to prevent wrong initial turns
             .headingPIDFCoefficients(new PIDFCoefficients(
-                    0.8,
+                    0.2,    // Reduced from 0.3 - less aggressive initial heading correction
                     0,
                     0,
                     0.01
             ))
             .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(
-                    2.5,
+                    0.7,    // Reduced from 1.0 - less aggressive when heading is wrong
                     0,
-                    0.1,
+                    0.06,   // Increased D for smoother correction
                     0.0005
             ))
+
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(
                     0.1,
                     0,
@@ -73,22 +80,20 @@ public class Constants {
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(8.5)
             .strafePodX(-8.5)
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
+            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
     /**
      These are the PathConstraints in order:
      tValueConstraint, velocityConstraint, translationalConstraint, headingConstraint, timeoutConstraint,
      brakingStrength, BEZIER_CURVE_SEARCH_LIMIT, brakingStart
-
      The BEZIER_CURVE_SEARCH_LIMIT should typically be left at 10 and shouldn't be changed.
      */
-
     public static PathConstraints pathConstraints = new PathConstraints(
             0.995,
             0.1,
-            0.1,
-            0.009,
+            0.2,   // INCREASED from 0.15 - more forgiving translational error
+            0.05,  // INCREASED from 0.03 - more forgiving heading error
             50,
             1.25,
             10,

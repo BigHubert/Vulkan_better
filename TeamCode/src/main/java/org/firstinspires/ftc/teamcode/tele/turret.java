@@ -28,6 +28,9 @@ public class turret extends LinearOpMode {
     private static final double llhieght = 0.25; // meters
     private static final double Theight = 1.5;   // meters
     private static final double llangle = 20.0;
+    private double lastHoodPos = 0.5;   // any safe default
+    private static final double hooddeadzone = 0.02;
+    private boolean lastHadTarget = false;
 
     double frontLeftPower = (0.15);
     double frontRightPower = (0.15);
@@ -54,7 +57,7 @@ public class turret extends LinearOpMode {
         rotationMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         rotationMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         hood = hardwareMap.get(Servo.class, "hood");
-        hood.setDirection(Servo.Direction.FORWARD);
+        hood.setDirection(Servo.Direction.REVERSE);
 
         motor_lf = hardwareMap.get(DcMotor.class, "motor_lf");
         motor_rf = hardwareMap.get(DcMotor.class, "motor_rf");
@@ -119,6 +122,18 @@ public class turret extends LinearOpMode {
             } else {
                 Pusher.setPower(0);
             }
+            if (gamepad1.y) {
+                Shooter.setPower(1);
+            }
+            else {
+                Shooter.setPower(0);
+            }
+            if (gamepad1.x) {
+                hood.setPosition(1);
+            }
+            else {
+                hood.setPosition(0.5);
+            }
 
             if (llResult != null && llResult.isValid()) {
                 double tx = llResult.getTx();
@@ -139,7 +154,14 @@ public class turret extends LinearOpMode {
                 double totalAngle = Math.toRadians(llangle + ty);
                 double distance = (Theight - llhieght) / Math.tan(totalAngle);
                 double hoodPos = getHoodPosition(distance);
-                hood.setPosition(hoodPos);
+                if (Math.abs(hoodPos - lastHoodPos) > hooddeadzone) {
+                    hood.setPosition(hoodPos);
+                    lastHoodPos = hoodPos;
+                }
+
+                lastHadTarget = true;
+                telemetry.addData("Hood", "Tracking target");
+
 
 
                 telemetry.addData("Tx", tx);
@@ -177,6 +199,9 @@ public class turret extends LinearOpMode {
                 rotationMotor.setPower(0);
                 lastMotorPower = 0;
                 telemetry.addData("Status", "No Data");
+                hood.setPosition(lastHoodPos);
+                telemetry.addData("Hood", "No target - holding last position");
+                lastHadTarget = false;
             }
 
             Shooter.setPower(shooterPower);
