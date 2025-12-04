@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.auton;
-import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.draw;
-import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.drawOnlyCurrent;
 import com.bylazar.field.FieldManager;
+import com.bylazar.field.FieldPresetParams;
 import com.bylazar.field.PanelsField;
 import com.bylazar.field.Style;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -19,26 +18,29 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Autonomous(name = "Pedro Test", group = "Examples")
+@Autonomous(name = "Vulkan Auton Blue", group = "Examples")
 public class Pedrotest extends OpMode {
 
     static TelemetryManager telemetryM;
+    static PoseHistory poseHistory;
     private static Follower follower;
+
 
     private Timer pathTimer, opmodeTimer;
     private int pathState;
-    private final Pose startPose = new Pose(60, 12, Math.toRadians(90));
-    private final Pose scorePose = new Pose(57, 91, Math.toRadians(130));
-    private final Pose pickBall = new Pose(20.5, 35, Math.toRadians(180));
-    private final Pose scorePose2 = new Pose(54, 93.5, Math.toRadians(130));
-    private final Pose pickBall2 = new Pose(18.5, 59.5, Math.toRadians(180));
-    private final Pose scorePose3 = new Pose(55, 95, Math.toRadians(130));
-    private final Pose grabball1 = new Pose(37, 35, Math.toRadians(180));
-    private final Pose grabball2 = new Pose(34, 60, Math.toRadians(180));
-    private final Pose endPose = new Pose(55,134, Math.toRadians(270));
+    private boolean allowUpdate = false;
 
-    private Path scorePreload;
-    private PathChain grabBalls1, pickballs1, Score1, grabBall2, pickballs2, score2,finish;
+    // Offset compensation: add 72 to X and Y to match visualization offset of (-72, -72)
+    private final Pose startPose = new Pose(132, 82, Math.toRadians(90));
+    private final Pose scorePose = new Pose(129, 140, Math.toRadians(130));
+    private final Pose pickBall = new Pose(92.5, 107, Math.toRadians(180));
+    private final Pose scorePose2 = new Pose(126, 165.5, Math.toRadians(130));
+    private final Pose pickBall2 = new Pose(90.5, 131.5, Math.toRadians(180));
+    private final Pose scorePose3 = new Pose(127, 167, Math.toRadians(130));
+    private final Pose grabball1 = new Pose(109, 107, Math.toRadians(180));
+    private final Pose grabball2 = new Pose(106, 132, Math.toRadians(180));
+    private final Pose endPose = new Pose(127, 206, Math.toRadians(270));
+    private PathChain scorePreload,grabBalls1, pickballs1, Score1, grabBall2, pickballs2, score2,finish;
 
     @Override
     public void init() {
@@ -46,12 +48,11 @@ public class Pedrotest extends OpMode {
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
         follower = Constants.createFollower(hardwareMap);
+        poseHistory = follower.getPoseHistory();
         Drawing.init();
-
         // CRITICAL: Set starting pose BEFORE building paths
         // Make sure this matches your robot's ACTUAL starting position on the field
         follower.setStartingPose(startPose);
-
         buildPaths();
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
     }
@@ -85,7 +86,6 @@ public class Pedrotest extends OpMode {
 
     public void init_loop(){
         if (follower != null) {
-            follower.update();
 
             // Draw all paths that will be followed during autonomous
             drawAllPaths();
@@ -98,8 +98,10 @@ public class Pedrotest extends OpMode {
     }
 
     private void buildPaths() {
-        scorePreload = new Path(new BezierLine(startPose, scorePose));
-        scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
+        scorePreload = follower.pathBuilder()
+                .addPath(new BezierLine(startPose, scorePose))
+                .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading())
+                .build();
 
         grabBalls1 = follower.pathBuilder()
                 .addPath(new BezierCurve(scorePose, new Pose(64, 31, Math.toRadians(180)), pickBall))
@@ -140,6 +142,7 @@ public class Pedrotest extends OpMode {
         switch (pathState) {
             case 0:
                 follower.followPath(scorePreload);
+
                 setPathState(1);
                 break;
 
@@ -208,33 +211,34 @@ public class Pedrotest extends OpMode {
     public void start() {
         opmodeTimer.resetTimer();
 
-        // IMPORTANT: Reset the starting pose when autonomous actually starts
-        // This ensures the robot knows where it actually is
-        follower.setStartingPose(startPose);
+        // Let localizer settle
+        follower.update();
+        Pose actualStartPose = follower.getPose();
 
-        // Update the follower a few times to let it settle and localize
-        for (int i = 0; i < 5; i++) {
-            follower.update();
-        }
+        // Calculate offset between desired and actual
+        double xOffset = startPose.getX() - actualStartPose.getX();
+        double yOffset = startPose.getY() - actualStartPose.getY();
+        double headingOffset = startPose.getHeading() - actualStartPose.getHeading();
 
-        // Debug: Check if starting pose matches actual pose
-        Pose actualPose = follower.getPose();
-        telemetryM.debug("Expected Start X: " + startPose.getX());
-        telemetryM.debug("Actual Start X: " + actualPose.getX());
-        telemetryM.debug("Expected Start Y: " + startPose.getY());
-        telemetryM.debug("Actual Start Y: " + actualPose.getY());
-        telemetryM.debug("Expected Start Heading: " + Math.toDegrees(startPose.getHeading()));
-        telemetryM.debug("Actual Start Heading: " + Math.toDegrees(actualPose.getHeading()));
-        telemetryM.update(telemetry);
+        telemetryM.debug("X Offset: " + xOffset);
+        telemetryM.debug("Y Offset: " + yOffset);
+        telemetryM.debug("Heading Offset: " + Math.toDegrees(headingOffset));
 
+        // If the offset is large, you might need to rebuild paths
+        // Or just accept the actual starting pose and adjust your field coordinates
+
+        follower.setStartingPose(actualStartPose); // Use actual pose
+        allowUpdate = true;
         setPathState(0);
     }
 
+
     @Override
     public void loop() {
-        follower.update();
-        autonomousPathUpdate();
-
+        if (allowUpdate) {
+            follower.update();
+            autonomousPathUpdate();
+        }
         telemetryM.debug("x:" + follower.getPose().getX());
         telemetryM.debug("y:" + follower.getPose().getY());
         telemetryM.debug("heading:" + Math.toDegrees(follower.getPose().getHeading()));
@@ -258,8 +262,11 @@ class Drawing {
     /**
      * This prepares Panels Field for using Pedro Offsets
      */
+
+
     public static void init() {
-        panelsField.setOffsets(PanelsField.INSTANCE.getPresets().getPEDRO_PATHING());
+        FieldPresetParams customPreset = new FieldPresetParams();
+        panelsField.setOffsets(customPreset);
     }
 
     /**
