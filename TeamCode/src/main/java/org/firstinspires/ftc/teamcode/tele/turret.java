@@ -8,8 +8,9 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 
-@TeleOp(name = "Turret", group = "TeleOp")
+@TeleOp(name = "Vulkan Tele Red", group = "TeleOp")
 public class turret extends LinearOpMode {
 
     private static final double targetTx = 0.0;
@@ -21,9 +22,10 @@ public class turret extends LinearOpMode {
     private static final double maxShooterPower = 0.9;
     private static final double minTa = 0.1;
     private static final double maxTa = 5.0;
+    private static final double rpmTolerance = 3000.0; // RPM tolerance for "correct"
 
     // Additional power when target is found and centered
-    private static final double foundBonus = 0.50;
+    private static final double foundBonus = 0.10;
     private static final double noTargetPower = 0.0;
     private static final double llhieght = 0.25; // meters
     private static final double Theight = 1.5;   // meters
@@ -42,6 +44,7 @@ public class turret extends LinearOpMode {
     private DcMotor Shooter;
     private DcMotor motor_rf, motor_lf, motor_rb, motor_lb, IntakeMotor, Pusher;
     private Servo hood;
+    private RevBlinkinLedDriver light;
 
     private double lastMotorPower = 0.0;
 
@@ -92,15 +95,16 @@ public class turret extends LinearOpMode {
 
         IntakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         Pusher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
         Shooter = hardwareMap.get(DcMotor.class, "Shooter");
         Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Shooter.setDirection(DcMotorSimple.Direction.REVERSE);
+        Shooter.setDirection(DcMotorSimple.Direction.FORWARD);
         Shooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         limelight = hardwareMap.get(Limelight3A.class, "Limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
+
+        light = hardwareMap.get(RevBlinkinLedDriver.class, "light");
 
         telemetry.addLine("Waiting for start...");
         telemetry.update();
@@ -167,12 +171,21 @@ public class turret extends LinearOpMode {
                 double ty = llResult.getTy();
 
                 if (ta > 0) {
-                    shooterPower = Range.clip(
-                            maxShooterPower - (ta - minTa) *
-                                    (maxShooterPower - minShooterPower) / (maxTa - minTa),
-                            minShooterPower,
-                            maxShooterPower
-                    );
+                    // If Ta is 0.45 or less, default to max power (1.0)
+                    if (ta <= 0.45) {
+                        shooterPower = 1.0;
+                    } else {
+                        shooterPower = Range.clip(
+                                maxShooterPower - (ta - minTa) *
+                                        (maxShooterPower - minShooterPower) / (maxTa - minTa),
+                                minShooterPower,
+                                maxShooterPower
+                        );
+                    }
+
+                    // Calculate target RPM based on Ta
+                    targetRPM = 6000 + (ta - 0.40) * (-574.7);
+                    targetRPM = Range.clip(targetRPM, 3500, 6000);
                 }
 
                 double totalAngle = Math.toRadians(llangle + ty);
@@ -214,7 +227,7 @@ public class turret extends LinearOpMode {
                     rotationMotor.setPower(0);
                     lastMotorPower = 0;
 
-                    telemetry.addData("Status", "Centered - MAX POWER!");
+                    telemetry.addData("Status", "Centered");
                     telemetry.addData("Target Found Bonus", foundBonus);
                 }
 
@@ -243,11 +256,28 @@ public class turret extends LinearOpMode {
             lastShooterPosition = currentPos;
             lastTime = now;
 
+            // Check if RPM is correct and set light color
+            boolean rpmCorrect = false;
+            if (targetRPM > 0 && shooterPower > 0) {
+                double rpmDifference = Math.abs(rpm - targetRPM);
+                rpmCorrect = rpmDifference <= rpmTolerance;
+            }
+
+            // Set REV Blinkin LED color: Blue if correct, Red if incorrect
+            if (rpmCorrect) {
+                // Blue pattern
+                light.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
+            } else {
+                // Red pattern
+                light.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
+            }
+
             // Display RPM telemetry
             telemetry.addData("Shooter RPM", (int) rpm);
             if (targetRPM > 0) {
                 telemetry.addData("Target RPM", (int) targetRPM);
                 telemetry.addData("ΔRPM", (int) Math.abs(rpm - targetRPM));
+                telemetry.addData("RPM Status", rpmCorrect ? "CORRECT (Green)" : "INCORRECT (Red)");
             }
             telemetry.addData("Final Shooter Power", shooterPower);
             telemetry.update();

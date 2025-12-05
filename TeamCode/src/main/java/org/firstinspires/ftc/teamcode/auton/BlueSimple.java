@@ -34,23 +34,32 @@ public class BlueSimple extends OpMode {
     private Timer pathTimer,opModeTimer;
     public enum PathState {
         DRIVE_STARTPOS_SHOOT_POS,
+        BETTER_STARTSHOOTPOS,
         SHOOT_PRELOAD,
         //must declare each new path
         GRAB_BALLS_1,
         STOP,
-        PICK_BALLS1
+        PICK_BALLS1,
+        SHOOT_BALLS_1
     }
     PathState pathState;
     private final Pose startPose = new Pose(60, 10, Math.toRadians(90));
-    private final Pose shootPose = new Pose(60, 20, Math.toRadians(40));
-    private final Pose Startofballs1 = new Pose(35,35, Math.toRadians(0));
-    private final Pose EndofBalls1 = new Pose(10,35, Math.toRadians(0));
-    private PathChain diveStartPosShootPos,grabballs1,pickballs1;
+    private final Pose betterstartPose = new Pose(60, 10, Math.toRadians(90));
+    private final Pose bettershootPose = new Pose(60, 90, Math.toRadians(130));
+    private final Pose shootPose = new Pose(60, 90, Math.toRadians(130));
+    private final Pose Startofballs1 = new Pose(35,35, Math.toRadians(180));
+    private final Pose EndofBalls1 = new Pose(0,35, Math.toRadians(180));
+    private PathChain diveStartPosShootPos,betterSTARTSHOOTPOS,grabballs1,pickballs1,shootballs1;
     public void buildPaths() {
         diveStartPosShootPos = follower.pathBuilder()
                 .addPath(new BezierLine(startPose, shootPose))
                 .setLinearHeadingInterpolation(startPose.getHeading(), shootPose.getHeading())
                 .build();
+        betterSTARTSHOOTPOS = follower.pathBuilder()
+                .addPath(new BezierLine(betterstartPose,bettershootPose))
+                .setLinearHeadingInterpolation(betterstartPose.getHeading(), bettershootPose.getHeading())
+                .build();
+
         grabballs1 =follower.pathBuilder()
                 .addPath(new BezierLine(shootPose,Startofballs1))
                 .setLinearHeadingInterpolation(shootPose.getHeading(),Startofballs1.getHeading())
@@ -59,6 +68,10 @@ public class BlueSimple extends OpMode {
                 .addPath(new BezierLine(Startofballs1,EndofBalls1))
                 .setLinearHeadingInterpolation(Startofballs1.getHeading(), EndofBalls1.getHeading())
                 .build();
+        shootballs1 = follower.pathBuilder()
+                .addPath(new BezierLine(EndofBalls1,shootPose))
+                .setLinearHeadingInterpolation(EndofBalls1.getHeading(), shootPose.getHeading())
+                .build();
     }
     public void statePathUpdate() {
         switch(pathState){
@@ -66,10 +79,14 @@ public class BlueSimple extends OpMode {
                 follower.followPath(diveStartPosShootPos, true);
                 setPathState(PathState.SHOOT_PRELOAD);
                 break;
+            case BETTER_STARTSHOOTPOS:
+                if (!follower.isBusy()){
+                    follower.followPath(betterSTARTSHOOTPOS, true);
+                    setPathState(PathState.SHOOT_PRELOAD);
+                    telemetry.addLine("Better Shoot Start");
+                }
+                break;
             case SHOOT_PRELOAD:
-                intake.setPower(0.9);
-                pusher.setPower(0.9);
-                shooter.setPower(1);
                 follower.holdPoint(follower.getPose());
                 if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 2) {
                     setPathState(PathState.GRAB_BALLS_1);
@@ -89,6 +106,12 @@ public class BlueSimple extends OpMode {
             case PICK_BALLS1 :
                 if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
                     follower.followPath(pickballs1, true);
+                    setPathState(PathState.SHOOT_BALLS_1);
+                    telemetry.addLine("Done Path 3");
+                }
+            case SHOOT_BALLS_1:
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
+                    follower.followPath(shootballs1, true);
                     setPathState(PathState.STOP);
                     telemetry.addLine("Done Path 3");
                 }
