@@ -1,5 +1,4 @@
-package org.firstinspires.ftc.teamcode.auton;
-
+package org.firstinspires.ftc.teamcode.pedroPathing;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -15,8 +14,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-@Autonomous(name = "Vulkan Auto Blue Far", group = "Examples")
-public class AutonThatBetterWork extends OpMode {
+@Autonomous(name = "Blue Close 9, 1 clear", group = "Blue 9")
+public class BlueClose9 extends OpMode {
     private static final double targetTx = 0.0;
     private static final double deadzone = 4.5;
     private static final double maxMotorPower = 0.25;
@@ -65,23 +64,35 @@ public class AutonThatBetterWork extends OpMode {
         SHOOT2,
         SHOOT_BALLS_1,
         SHOOT_BALLS_2,
-        GET_OUT_OF_Way
+        SHOOT_BALLS_3,
+        SHOOT3,
+        GRAB_BALLS_3,
+        PICK_BALLS3,
+        CLEAR_RAMP1,
+        CLEAR_RAMP2,
+        CLEAR_RAMP3,
+        LAUNCH_CLEARANCE
     }
     PathState pathState;
-    private final Pose startPose = new Pose(60, 10, Math.toRadians(90));
-    private final Pose shootPose = new Pose(60, 90, Math.toRadians(130));
-    private final Pose Startofballs1 = new Pose(45,35, Math.toRadians(180));
-    private final Pose EndofBalls1 = new Pose(20,35, Math.toRadians(180));
+    private final Pose startPose = new Pose(19, 121.5, Math.toRadians(144));
+    private final Pose shootPose = new Pose(56, 86, Math.toRadians(130));
+    private final Pose Startofballs1 = new Pose(45,85, Math.toRadians(180));
+    private final Pose EndofBalls1 = new Pose(21,85, Math.toRadians(180));
     private final Pose Startofballs2 = new Pose(45,60, Math.toRadians(180));
-    private final Pose EndofBalls2 = new Pose(20,60, Math.toRadians(180));
-    private final Pose OutOFWay = new Pose(60,60, Math.toRadians(180));
-    private PathChain diveStartPosShootPos,grabballs1,pickballs1,shoot1,grabballs2,pickballs2,getoutoftheway,shoot2;
+    private final Pose EndofBalls2 = new Pose(21,60, Math.toRadians(180));
+    private final Pose Startofballs3 = new Pose(45,36, Math.toRadians(180));
+    private final Pose EndofBalls3 = new Pose(21,36, Math.toRadians(180));
+    private final Pose ClearRamp1 = new Pose(45,74, Math.toRadians(180));
+    private final Pose ClearRamp2 = new Pose(19.5,74, Math.toRadians(180));
+    private final Pose ClearRamp3 = new Pose(45,78, Math.toRadians(180));
+    private final Pose LaunchClearance = new Pose(45,70, Math.toRadians(90));
+    private PathChain diveStartPosShootPos,grabballs1,pickballs1,shoot1,grabballs2,pickballs2,shoot2,grabballs3,pickballs3,shoot3,clearramp1,clearramp2,clearramp3,launchclearance;
     public void buildPaths() {
         diveStartPosShootPos = follower.pathBuilder()
                 .addPath(new BezierLine(startPose, shootPose))
                 .setLinearHeadingInterpolation(startPose.getHeading(), shootPose.getHeading())
                 .build();
-        grabballs1 =follower.pathBuilder()
+        grabballs1 = follower.pathBuilder()
                 .addPath(new BezierLine(shootPose,Startofballs1))
                 .setLinearHeadingInterpolation(shootPose.getHeading(),Startofballs1.getHeading())
                 .build();
@@ -101,84 +112,113 @@ public class AutonThatBetterWork extends OpMode {
                 .addPath(new BezierLine(Startofballs2,EndofBalls2))
                 .setLinearHeadingInterpolation(Startofballs2.getHeading(), EndofBalls2.getHeading())
                 .build();
-        getoutoftheway = follower.pathBuilder()
-                .addPath(new BezierLine(EndofBalls1,OutOFWay))
-                .setLinearHeadingInterpolation(EndofBalls1.getHeading(),OutOFWay.getHeading())
-                .build();
         shoot2 = follower.pathBuilder()
-                .addPath(new BezierLine(OutOFWay,shootPose))
-                .setLinearHeadingInterpolation(OutOFWay.getHeading(), shootPose.getHeading())
+                .addPath(new BezierLine(EndofBalls2,shootPose))
+                .setLinearHeadingInterpolation(EndofBalls2.getHeading(), shootPose.getHeading())
+                .build();
+        grabballs3 = follower.pathBuilder()
+                .addPath(new BezierLine(shootPose,Startofballs3))
+                .setLinearHeadingInterpolation(shootPose.getHeading(), Startofballs3.getHeading())
+                .build();
+        pickballs3 = follower.pathBuilder()
+                .addPath(new BezierLine(Startofballs3,EndofBalls3))
+                .setLinearHeadingInterpolation(Startofballs3.getHeading(), EndofBalls3.getHeading())
+                .build();
+        shoot3 = follower.pathBuilder()
+                .addPath(new BezierLine(EndofBalls3,shootPose))
+                .setLinearHeadingInterpolation(EndofBalls3.getHeading(), shootPose.getHeading())
+                .build();
+        clearramp1 = follower.pathBuilder()
+                .addPath(new BezierLine(EndofBalls1,ClearRamp1))
+                .setLinearHeadingInterpolation(EndofBalls1.getHeading(), ClearRamp1.getHeading())
+                .build();
+        clearramp2 = follower.pathBuilder()
+                .addPath(new BezierLine(ClearRamp1,ClearRamp2))
+                .setLinearHeadingInterpolation(ClearRamp1.getHeading(), ClearRamp2.getHeading())
+                .build();
+        clearramp3 = follower.pathBuilder()
+                .addPath(new BezierLine(shootPose,ClearRamp2))
+                .setLinearHeadingInterpolation(shootPose.getHeading(), ClearRamp2.getHeading())
+                .build();
+        launchclearance = follower.pathBuilder()
+                .addPath(new BezierLine(shootPose,LaunchClearance))
+                .setLinearHeadingInterpolation(shootPose.getHeading(), LaunchClearance.getHeading())
                 .build();
     }
     public void statePathUpdate() {
         switch(pathState){
             case DRIVE_STARTPOS_SHOOT_POS:
-                follower.followPath(diveStartPosShootPos, true);
-                setPathState(PathState.SHOOT_PRELOAD);
-                Shooter.setPower(0.8);
+                if (!follower.isBusy()) {
+                    follower.followPath(diveStartPosShootPos, true);
+                    setPathState(PathState.SHOOT_PRELOAD);
+                    limelight.pipelineSwitch(0);
+                    Shooter.setPower(0.675);
+                }
                 break;
             case SHOOT_PRELOAD:
-
-                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 2.5) {
                     setPathState(PathState.GRAB_BALLS_1);
-                    telemetry.addLine("Done Path 1");
-                    Shooter.setPower(0.9);
+                    Shooter.setPower(0.675);
                     IntakeMotor.setPower(0.9);
                     Pusher.setPower(0.9);
                 }
                 break;
             case GRAB_BALLS_1:
-                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 3) {
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 2) {
                     follower.followPath(grabballs1, true);
                     setPathState(PathState.PICK_BALLS1);
-                    telemetry.addLine("Done Path 2");
                     Shooter.setPower(0);
                     IntakeMotor.setPower(0);
                     Pusher.setPower(0);
                 }
                 break;
             case PICK_BALLS1 :
-                if (!follower.isBusy() /*&& pathTimer.getElapsedTimeSeconds() > 5*/) {
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
                     follower.followPath(pickballs1, true);
-                    setPathState(PathState.GET_OUT_OF_Way);
-                    telemetry.addLine("Done Path 3");
+                    setPathState(PathState.CLEAR_RAMP1);
                     IntakeMotor.setPower(0.9);
                 }
-            case GET_OUT_OF_Way:
-                if (!follower.isBusy()) {
-                    follower.followPath(getoutoftheway, true);
+                break;
+            case CLEAR_RAMP1:
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
+                    follower.followPath(clearramp1, true);
+                    setPathState(PathState.CLEAR_RAMP2);
+                    Shooter.setPower(0);
+                    IntakeMotor.setPower(0);
+                    Pusher.setPower(0);
+                }
+                break;
+            case CLEAR_RAMP2:
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
+                    follower.followPath(clearramp2, true);
                     setPathState(PathState.SHOOT1);
-                    IntakeMotor.setPower(0.0);
-                    telemetry.addLine("Done Path 6");
                 }
                 break;
             case SHOOT1 :
-                if (!follower.isBusy()){
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1.5){
                     follower.followPath(shoot1, true);
                     setPathState(PathState.SHOOT_BALLS_1);
-                    Shooter.setPower(0.9);
+                    limelight.pipelineSwitch(1);
+                    Shooter.setPower(0.675);
                     IntakeMotor.setPower(0);
-                    telemetry.addLine("Done Path 4");
                 }
                 break;
             case SHOOT_BALLS_1:
-
-                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1/*4*/) {
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 2.5) {
                     setPathState(PathState.GRAB_BALLS_2);
-                    telemetry.addLine("Done Path 1");
-                    Shooter.setPower(0.9);
+                    Shooter.setPower(0.675);
                     IntakeMotor.setPower(0.9);
                     Pusher.setPower(0.9);
                 }
                 break;
             case GRAB_BALLS_2 :
-                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 3/*1*/) {
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
                     follower.followPath(grabballs2, true);
                     setPathState(PathState.PICK_BALLS2);
+                    limelight.pipelineSwitch(0);
                     Shooter.setPower(0);
                     IntakeMotor.setPower(0);
                     Pusher.setPower(0);
-                    telemetry.addLine("Done Path 5");
                 }
                 break;
             case PICK_BALLS2 :
@@ -186,30 +226,41 @@ public class AutonThatBetterWork extends OpMode {
                     follower.followPath(pickballs2, true);
                     setPathState(PathState.SHOOT2);
                     IntakeMotor.setPower(0.9);
-                    telemetry.addLine("Done Path 6");
                 }
                 break;
             case SHOOT2 :
-                if (!follower.isBusy()) {
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1.5) {
                     follower.followPath(shoot2, true);
                     setPathState(PathState.SHOOT_BALLS_2);
-                    Shooter.setPower(0.9);
-                    telemetry.addLine("Done Path 7");
+                    limelight.pipelineSwitch(1);
+                    Shooter.setPower(0.675);
+                    IntakeMotor.setPower(0);
+
                 }
                 break;
             case SHOOT_BALLS_2:
-                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 1) {
-                    setPathState(PathState.STOP);
-                    telemetry.addLine("Done Path 1");
-                    Shooter.setPower(0.9);
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 2.5) {
+                    setPathState(PathState.LAUNCH_CLEARANCE);
+                    Shooter.setPower(0.675);
                     IntakeMotor.setPower(0.9);
                     Pusher.setPower(0.9);
+                }
+                break;
+            case LAUNCH_CLEARANCE:
+                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 3) {
+                    follower.followPath(launchclearance, true);
+                    setPathState(PathState.STOP);
+                    limelight.pipelineSwitch(0);
+                    Shooter.setPower(0);
+                    IntakeMotor.setPower(0);
+                    Pusher.setPower(0);
                 }
                 break;
             case STOP:
                 if (!follower.isBusy()&& pathTimer.getElapsedTimeSeconds() > 3){
                     follower.holdPoint(follower.getPose());
                     telemetry.addLine("Stopped");
+                    limelight.pipelineSwitch(0);
                     Shooter.setPower(0);
                     IntakeMotor.setPower(0);
                     Pusher.setPower(0);
@@ -331,3 +382,4 @@ public class AutonThatBetterWork extends OpMode {
         }
     }
 }
+
